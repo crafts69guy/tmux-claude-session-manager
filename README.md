@@ -169,6 +169,15 @@ Each provider gets its own session prefix derived from its key (`claude-`,
 without collisions. Add or remove providers by overriding `@claude_providers` —
 e.g. drop OpenCode, or add `gemini:gemini:Gemini`.
 
+Because `@claude_providers` is space-delimited, the `command` field there cannot
+contain arguments. To launch a provider with flags, use the per-provider option
+`@claude_cmd_<key>`, which may contain spaces:
+
+```tmux
+set -g @claude_cmd_codex 'codex --model o1'
+set -g @claude_cmd_claude 'claude --resume'
+```
+
 ## How it works
 
 - The **launcher** creates a detached `<provider>-<hash-of-dir>` tmux session

@@ -36,11 +36,19 @@ get_providers() {
 provider_prefix() { printf '%s-' "$1"; }
 
 # provider_command <key> -> command to run for that provider.
-# Honors @claude_command as an override for the claude provider (back-compat).
+# Resolution order (first non-empty wins):
+#   1. @claude_cmd_<key>  per-provider option — may contain spaces/flags, e.g.
+#                         set -g @claude_cmd_codex 'codex --model o1'
+#   2. @claude_command    legacy override, claude provider only (back-compat)
+#   3. the command field of the @claude_providers entry (no spaces — see header)
+#   4. the key itself
+# The per-provider option exists because @claude_providers is space-delimited and
+# therefore cannot carry a command with arguments; this option can.
 provider_command() {
-  local want="$1" entry key command
+  local want="$1" entry key command override
+  override="$(tmux show-option -gqv "@claude_cmd_${want}" 2>/dev/null)"
+  [ -n "$override" ] && { printf '%s' "$override"; return; }
   if [ "$want" = claude ]; then
-    local override
     override="$(tmux show-option -gqv @claude_command 2>/dev/null)"
     [ -n "$override" ] && { printf '%s' "$override"; return; }
   fi
