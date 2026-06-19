@@ -19,8 +19,16 @@ h="$(get_tmux_option @claude_popup_height '90%')"
 
 session="${prefix}$(session_hash "$path")"
 
-tmux has-session -t "$session" 2>/dev/null \
-  || tmux new-session -d -s "$session" -c "$path" "$cmd"
+if ! tmux has-session -t "$session" 2>/dev/null; then
+  # Fail loudly instead of spawning a session that dies instantly when the
+  # provider CLI is missing. ${cmd%% *} strips any arguments so we test the
+  # binary, not the whole command line.
+  if ! command -v "${cmd%% *}" >/dev/null 2>&1; then
+    tmux display-message "claude-session-manager: '${cmd%% *}' not found in PATH"
+    exit 0
+  fi
+  tmux new-session -d -s "$session" -c "$path" "$cmd"
+fi
 
 # Record which window launched it, so the picker can jump back here later.
 [ -n "$window" ] && tmux set-option -t "$session" @claude_origin "$window"
