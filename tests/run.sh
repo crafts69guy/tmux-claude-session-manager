@@ -51,25 +51,37 @@ TMUX_OPTS=()
 check 'cmd from list' 'opencode' "$(provider_command opencode)"
 check 'cmd unknown -> key' 'gemini' "$(provider_command gemini)"
 
-TMUX_OPTS[@claude_command]='claude --resume'
-check 'cmd legacy override (claude only)' 'claude --resume' "$(provider_command claude)"
-check 'cmd legacy does not leak to codex' 'codex' "$(provider_command codex)"
+TMUX_OPTS[@ai_command]='claude --resume'
+check 'cmd override (claude only)' 'claude --resume' "$(provider_command claude)"
+check 'cmd override does not leak to codex' 'codex' "$(provider_command codex)"
 
-TMUX_OPTS[@claude_cmd_codex]='codex --model o1'
+TMUX_OPTS[@ai_cmd_codex]='codex --model o1'
 check 'cmd per-provider with flags' 'codex --model o1' "$(provider_command codex)"
-TMUX_OPTS[@claude_cmd_claude]='claude --dangerously-skip-permissions'
-check 'cmd per-provider beats legacy' 'claude --dangerously-skip-permissions' "$(provider_command claude)"
+TMUX_OPTS[@ai_cmd_claude]='claude --dangerously-skip-permissions'
+check 'cmd per-provider beats command override' 'claude --dangerously-skip-permissions' "$(provider_command claude)"
 
-# custom @claude_providers
-TMUX_OPTS=([@claude_providers]='claude:claude:Claude gemini:gemini:Gemini')
+# custom @ai_providers
+TMUX_OPTS=([@ai_providers]='claude:claude:Claude gemini:gemini:Gemini')
 check 'custom providers regex' 'claude-|gemini-' "$(provider_prefixes_regex)"
 check 'custom providers label' 'Gemini' "$(provider_label gemini)"
 
 # popup_dims defaults and overrides
 TMUX_OPTS=()
 check 'popup_dims defaults' '90% 90%' "$(popup_dims)"
-TMUX_OPTS=([@claude_popup_width]='70%' [@claude_popup_height]='80%')
+TMUX_OPTS=([@ai_popup_width]='70%' [@ai_popup_height]='80%')
 check 'popup_dims overrides' '70% 80%' "$(popup_dims)"
+
+# back-compat: deprecated @claude_* aliases still resolve, and @ai_* wins
+TMUX_OPTS=([@claude_providers]='claude:claude:Claude gemini:gemini:Gemini')
+check 'legacy @claude_providers alias' 'claude-|gemini-' "$(provider_prefixes_regex)"
+TMUX_OPTS=([@claude_command]='claude --legacy')
+check 'legacy @claude_command alias' 'claude --legacy' "$(provider_command claude)"
+TMUX_OPTS=([@claude_cmd_codex]='codex --legacy')
+check 'legacy @claude_cmd_<key> alias' 'codex --legacy' "$(provider_command codex)"
+TMUX_OPTS=([@ai_command]='claude --new' [@claude_command]='claude --old')
+check '@ai_* takes precedence over @claude_*' 'claude --new' "$(provider_command claude)"
+TMUX_OPTS=([@claude_popup_width]='50%')
+check 'legacy @claude_popup_width alias' '50% 90%' "$(popup_dims)"
 
 # session_hash: stable 8-char, deterministic
 h1="$(session_hash /home/me/project)"

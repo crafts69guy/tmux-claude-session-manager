@@ -15,7 +15,7 @@ emit_rows() {
   local now s state at path icon rank ago provider
   now=$(date +%s)
   # One tmux call pulls every session's name, state, timestamp and path at once.
-  # Session-scoped user options are read inline via #{@claude_state} etc., so we
+  # Session-scoped user options are read inline via #{@ai_state} etc., so we
   # avoid the previous per-session show-options/display-message subprocess fan-out.
   while IFS=$'\t' read -r s state at path; do
     provider=$(provider_label "$(provider_of_session "$s")")
@@ -29,7 +29,7 @@ emit_rows() {
     # rank \t session \t provider \t icon \t path \t age  (rank/session hidden via --with-nth)
     printf '%s\t%s\t%-9s\t%s\t%s\t%s\n' "$rank" "$s" "$provider" "$icon" "${path/#$HOME/~}" "$ago"
   done < <(tmux list-sessions \
-             -F "#{session_name}	#{@claude_state}	#{@claude_state_at}	#{pane_current_path}" \
+             -F "#{session_name}	#{@ai_state}	#{@ai_state_at}	#{pane_current_path}" \
              2>/dev/null | grep -E "^(${prefixes_re})") |
     sort -n # attention-needed (waiting, idle) float to the top
 }
@@ -53,8 +53,8 @@ target=$(printf '%s' "$sel" | cut -f2)
 # Move the underlying parent client to the session's origin window (best-effort),
 # then resume the session in THIS popup over it. Falls back to resuming over the
 # current window when origin/parent are unknown.
-origin=$(tmux show-options -qv -t "$target" @claude_origin 2>/dev/null)
-parent=$(tmux show-options -gqv @claude_parent 2>/dev/null)
+origin=$(tmux show-options -qv -t "$target" @ai_origin 2>/dev/null)
+parent=$(tmux show-options -gqv @ai_parent 2>/dev/null)
 [ -n "$origin" ] && [ -n "$parent" ] && \
   tmux switch-client -c "$parent" -t "$origin" 2>/dev/null
 

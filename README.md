@@ -152,40 +152,44 @@ The state machine:
 Set any of these before the plugin loads (defaults shown):
 
 ```tmux
-set -g @claude_launch_key      'y'        # prefix key: launch/open Claude for current dir
-set -g @claude_launch_menu_key 'Y'        # prefix key: open the AI provider menu
-set -g @claude_list_key        'u'        # prefix key: open the picker
-set -g @claude_command         'claude'   # command for the claude provider (override)
-set -g @claude_popup_width      '90%'     # popup width
-set -g @claude_popup_height     '90%'     # popup height
+set -g @ai_launch_key      'y'        # prefix key: launch/open Claude for current dir
+set -g @ai_launch_menu_key 'Y'        # prefix key: open the AI provider menu
+set -g @ai_list_key        'u'        # prefix key: open the picker
+set -g @ai_command         'claude'   # command for the claude provider (override)
+set -g @ai_popup_width      '90%'     # popup width
+set -g @ai_popup_height     '90%'     # popup height
 
 # Providers shown in the `prefix` + `Y` menu and listed by the picker.
 # Space-separated  key:command:Label  entries (command/Label optional).
-set -g @claude_providers 'claude:claude:Claude codex:codex:Codex opencode:opencode:OpenCode'
+set -g @ai_providers 'claude:claude:Claude codex:codex:Codex opencode:opencode:OpenCode'
 ```
+
+> **Back-compat:** every user-facing option also accepts its legacy `@claude_*`
+> spelling (e.g. `@claude_providers`), so existing configs keep working. The
+> `@ai_*` namespace is canonical and takes precedence when both are set.
 
 Each provider gets its own session prefix derived from its key (`claude-`,
 `codex-`, `opencode-`), so the same directory can hold one session per provider
-without collisions. Add or remove providers by overriding `@claude_providers` —
+without collisions. Add or remove providers by overriding `@ai_providers` —
 e.g. drop OpenCode, or add `gemini:gemini:Gemini`.
 
-Because `@claude_providers` is space-delimited, the `command` field there cannot
+Because `@ai_providers` is space-delimited, the `command` field there cannot
 contain arguments. To launch a provider with flags, use the per-provider option
-`@claude_cmd_<key>`, which may contain spaces:
+`@ai_cmd_<key>`, which may contain spaces:
 
 ```tmux
-set -g @claude_cmd_codex 'codex --model o1'
-set -g @claude_cmd_claude 'claude --resume'
+set -g @ai_cmd_codex 'codex --model o1'
+set -g @ai_cmd_claude 'claude --resume'
 ```
 
 ## How it works
 
 - The **launcher** creates a detached `<provider>-<hash-of-dir>` tmux session
   running that provider's command (e.g. `claude-<hash>` running `claude`), records
-  the window it came from in `@claude_origin`, and attaches to it in a popup.
-- The **provider menu** (`prefix` + `Y`) is built from `@claude_providers`; each
+  the window it came from in `@ai_origin`, and attaches to it in a popup.
+- The **provider menu** (`prefix` + `Y`) is built from `@ai_providers`; each
   entry launches via the same launcher with its own command and session prefix.
-- The **hooks** set `@claude_state` / `@claude_state_at` on each session as Claude
+- The **hooks** set `@ai_state` / `@ai_state_at` on each session as Claude
   works.
 - The **picker** lists sessions matching any provider prefix, reads their state and a live
   `capture-pane` preview, and on selection moves your client to the session's

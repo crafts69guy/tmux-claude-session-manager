@@ -30,6 +30,6 @@ if ! tmux has-session -t "$session" 2>/dev/null; then
 fi
 
 # Record which window launched it, so the picker can jump back here later.
-[ -n "$window" ] && tmux set-option -t "$session" @claude_origin "$window"
+[ -n "$window" ] && tmux set-option -t "$session" @ai_origin "$window"
 
 tmux display-popup -w "$w" -h "$h" -E "tmux attach-session -t $session"

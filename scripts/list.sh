@@ -34,7 +34,7 @@ if [ -n "$sess" ]; then
 fi
 
 host="$(host_client)"
-tmux set-option -g @claude_parent "$host"
+tmux set-option -g @ai_parent "$host"
 
 # Host the picker on the outer client. -c is honored because that client has no
 # popup open now; fall back to the default client if none was found.

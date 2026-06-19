@@ -9,6 +9,6 @@
 session=$(tmux display-message -p -t "$TMUX_PANE" '#{session_name}' 2>/dev/null) || exit 0
 [ -z "$session" ] && exit 0
 
-tmux set-option -t "$session" @claude_state "${1:-idle}"
-tmux set-option -t "$session" @claude_state_at "$(date +%s)"
+tmux set-option -t "$session" @ai_state "${1:-idle}"
+tmux set-option -t "$session" @ai_state_at "$(date +%s)"
 exit 0
