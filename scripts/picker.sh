@@ -14,10 +14,10 @@ prefixes_re="$(provider_prefixes_regex)"
 emit_rows() {
   local now s state at path icon rank ago provider
   now=$(date +%s)
-  tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E "^(${prefixes_re})" | while IFS= read -r s; do
-    state=$(tmux show-options -qv -t "$s" @claude_state 2>/dev/null)
-    at=$(tmux show-options -qv -t "$s" @claude_state_at 2>/dev/null)
-    path=$(tmux display-message -p -t "$s" '#{pane_current_path}' 2>/dev/null)
+  # One tmux call pulls every session's name, state, timestamp and path at once.
+  # Session-scoped user options are read inline via #{@claude_state} etc., so we
+  # avoid the previous per-session show-options/display-message subprocess fan-out.
+  while IFS=$'\t' read -r s state at path; do
     provider=$(provider_label "$(provider_of_session "$s")")
     case "$state" in
       waiting) icon=$'\033[33m●\033[0m waiting' rank=0 ;; # yellow - needs input
@@ -28,7 +28,10 @@ emit_rows() {
     if [ -n "$at" ]; then ago="$(( (now - at) / 60 ))m"; else ago='-'; fi
     # rank \t session \t provider \t icon \t path \t age  (rank/session hidden via --with-nth)
     printf '%s\t%s\t%-9s\t%s\t%s\t%s\n' "$rank" "$s" "$provider" "$icon" "${path/#$HOME/~}" "$ago"
-  done | sort -n # attention-needed (waiting, idle) float to the top
+  done < <(tmux list-sessions \
+             -F "#{session_name}	#{@claude_state}	#{@claude_state_at}	#{pane_current_path}" \
+             2>/dev/null | grep -E "^(${prefixes_re})") |
+    sort -n # attention-needed (waiting, idle) float to the top
 }
 
 [ "${1:-}" = '--list' ] && { emit_rows; exit 0; }
