@@ -90,9 +90,17 @@ sel=$(emit_rows | fzf "${fzf_opts[@]}")
 [ -z "$sel" ] && exit 0
 target=$(printf '%s' "$sel" | cut -f2)
 
-# Move the underlying parent client to the session's origin window (best-effort),
-# then resume the session in THIS popup over it. Falls back to resuming over the
-# current window when origin/parent are unknown.
+# Nested case: list.sh recorded the popup client that opened us. Switch that
+# client to the chosen session in place — the nested popup then closes, revealing
+# the target with no popup close/reopen (hence no flash).
+caller=$(tmux show-options -gqv @ai_caller 2>/dev/null)
+if [ -n "$caller" ]; then
+  tmux switch-client -c "$caller" -t "$target" 2>/dev/null
+  exit 0
+fi
+
+# Non-nested fallback: move the host client to the session's origin window, then
+# resume the session in THIS popup over it.
 origin=$(tmux show-options -qv -t "$target" @ai_origin 2>/dev/null)
 parent=$(tmux show-options -gqv @ai_parent 2>/dev/null)
 [ -n "$origin" ] && [ -n "$parent" ] && \
