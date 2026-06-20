@@ -44,9 +44,12 @@ fi
 self="${BASH_SOURCE[0]}"
 
 # Base options shared by every fzf version.
+# --height=100% fills the whole popup; it overrides any --height (e.g. 40%) the
+# user set in FZF_DEFAULT_OPTS, which would otherwise leave the lower part of the
+# popup blank. Command-line opts win over FZF_DEFAULT_OPTS.
 fzf_opts=(
   --ansi --delimiter='\t' --with-nth=3,4,5,6
-  --reverse --cycle
+  --reverse --cycle --height=100%
   --preview="tmux capture-pane -ept {2}"
   --preview-window='right,70%,wrap'  # 3/7 split: list 30% · preview 70%
   --bind="ctrl-x:execute-silent(tmux kill-session -t {2})+reload($self --list)"
