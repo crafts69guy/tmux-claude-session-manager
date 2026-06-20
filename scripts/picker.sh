@@ -42,10 +42,35 @@ if ! command -v fzf >/dev/null 2>&1; then
 fi
 
 self="${BASH_SOURCE[0]}"
-sel=$(emit_rows | fzf --ansi --delimiter='\t' --with-nth=3,4,5,6 \
-  --reverse --cycle --header='AI sessions · enter: jump · ctrl-x: kill' \
-  --preview="tmux capture-pane -ept {2}" --preview-window='right,62%,wrap' \
-  --bind="ctrl-x:execute-silent(tmux kill-session -t {2})+reload($self --list)")
+
+# Base options shared by every fzf version.
+fzf_opts=(
+  --ansi --delimiter='\t' --with-nth=3,4,5,6
+  --reverse --cycle
+  --preview="tmux capture-pane -ept {2}"
+  --preview-window='right,70%,wrap'  # 3/7 split: list 30% · preview 70%
+  --bind="ctrl-x:execute-silent(tmux kill-session -t {2})+reload($self --list)"
+)
+
+# Bordered, multi-pane layout (fzf >= 0.53). Each region gets its own labelled
+# box — input, results list, preview — mirroring the lazy.nvim help viewer.
+# Older fzf lacks these flags, so fall back to a plain header + preview split.
+if fzf --help 2>&1 | grep -q -- '--list-border'; then
+  fzf_opts+=(
+    --style=full
+    --input-border   --input-label=' AI sessions '
+    --list-border    --list-label=' Results '
+    --preview-border --preview-label=' Preview '
+    --color='label:bold'
+    --pointer='▶'
+    --prompt='  '
+    --header='enter: jump · ctrl-x: kill'
+  )
+else
+  fzf_opts+=(--header='AI sessions · enter: jump · ctrl-x: kill')
+fi
+
+sel=$(emit_rows | fzf "${fzf_opts[@]}")
 
 [ -z "$sel" ] && exit 0
 target=$(printf '%s' "$sel" | cut -f2)
