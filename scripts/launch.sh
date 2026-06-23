@@ -18,6 +18,14 @@ read -r w h < <(popup_dims)
 
 session="${prefix}$(session_hash "$path")"
 
+# tmux does not allow nested sessions: if we are already inside a managed
+# session's popup, refuse rather than stacking another one on top.
+if tmux display-message -p '#S' 2>/dev/null |
+  grep -qE "^($(provider_prefixes_regex))"; then
+  tmux display-message '🫪 Already inside an AI session popup'
+  exit 0
+fi
+
 if ! tmux has-session -t "$session" 2>/dev/null; then
   # Fail loudly instead of spawning a session that dies instantly when the
   # provider CLI is missing. ${cmd%% *} strips any arguments so we test the

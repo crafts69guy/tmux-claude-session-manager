@@ -20,21 +20,27 @@ emit_rows() {
   while IFS=$'\t' read -r s state at path; do
     provider=$(provider_label "$(provider_of_session "$s")")
     case "$state" in
-      waiting) icon=$'\033[33m●\033[0m waiting' rank=0 ;; # yellow - needs input
-      idle)    icon=$'\033[32m●\033[0m idle   ' rank=1 ;; # green  - done, your turn
-      working) icon=$'\033[31m●\033[0m working' rank=3 ;; # red    - busy, leave it
-      *)       icon=$'\033[90m●\033[0m   ?    ' rank=2 ;; # grey   - unknown (no hook yet)
+    waiting) icon=$'\033[33m●\033[0m waiting' rank=0 ;; # yellow - needs input
+    idle) icon=$'\033[32m●\033[0m idle   ' rank=1 ;;    # green  - done, your turn
+    working) icon=$'\033[31m●\033[0m working' rank=3 ;; # red    - busy, leave it
+    *) icon=$'\033[90m●\033[0m   ?    ' rank=2 ;;       # grey   - unknown (no hook yet)
     esac
-    if [ -n "$at" ]; then ago="$(( (now - at) / 60 ))m"; else ago='-'; fi
+    if [ -n "$at" ]; then ago="$(((now - at) / 60))m"; else ago='-'; fi
     # rank \t session \t provider \t icon \t path \t age  (rank/session hidden via --with-nth)
     printf '%s\t%s\t%-9s\t%s\t%s\t%s\n' "$rank" "$s" "$provider" "$icon" "${path/#$HOME/~}" "$ago"
   done < <(tmux list-sessions \
-             -F "#{session_name}	#{@ai_state}	#{@ai_state_at}	#{pane_current_path}" \
-             2>/dev/null | grep -E "^(${prefixes_re})") |
-    sort -n # attention-needed (waiting, idle) float to the top
+    -F "#{session_name}	#{@ai_state}	#{@ai_state_at}	#{pane_current_path}" \
+    2>/dev/null | grep -E "^(${prefixes_re})") |
+    # rank asc (attention-needed floats up), then age asc so the session that
+    # finished just now sits at the top of its group. -k6,6n reads the leading
+    # number of the age field ("5m" -> 5; "-" -> 0).
+    sort -t$'\t' -k1,1n -k6,6n
 }
 
-[ "${1:-}" = '--list' ] && { emit_rows; exit 0; }
+[ "${1:-}" = '--list' ] && {
+  emit_rows
+  exit 0
+}
 
 if ! command -v fzf >/dev/null 2>&1; then
   tmux display-message "tmux-claude-session-manager: fzf is required for the picker"
@@ -46,12 +52,13 @@ self="${BASH_SOURCE[0]}"
 # Base options shared by every fzf version.
 # --height=100% fills the whole popup; it overrides any --height (e.g. 40%) the
 # user set in FZF_DEFAULT_OPTS, which would otherwise leave the lower part of the
-# popup blank. Command-line opts win over FZF_DEFAULT_OPTS.
+# popup blank. Command-line opts win over FZF_DEFAULT_OPTS, so the user's theme is
+# inherited while the layout stays pinned.
 fzf_opts=(
   --ansi --delimiter='\t' --with-nth=3,4,5,6
   --reverse --cycle --height=100%
   --preview="tmux capture-pane -ept {2}"
-  --preview-window='right,70%,wrap'  # 3/7 split: list 30% · preview 70%
+  --preview-window='right,70%,wrap' # 3/7 split: list 30% · preview 70%
   --bind="ctrl-x:execute-silent(tmux kill-session -t {2})+reload($self --list)"
 )
 
@@ -61,8 +68,8 @@ fzf_opts=(
 if fzf --help 2>&1 | grep -q -- '--list-border'; then
   fzf_opts+=(
     --style=full
-    --input-border   --input-label=' AI sessions '
-    --list-border    --list-label=' Results '
+    --input-border --input-label=' AI sessions '
+    --list-border --list-label=' Results '
     --preview-border --preview-label=' Preview '
     --color='label:bold'
     --pointer='▶'
@@ -94,7 +101,7 @@ target=$(printf '%s' "$sel" | cut -f2)
 # THIS popup over it, so closing the popup reveals the session in place.
 origin=$(tmux show-options -qv -t "$target" @ai_origin 2>/dev/null)
 parent=$(tmux show-options -gqv @ai_parent 2>/dev/null)
-[ -n "$origin" ] && [ -n "$parent" ] && \
+[ -n "$origin" ] && [ -n "$parent" ] &&
   tmux switch-client -c "$parent" -t "$origin" 2>/dev/null
 
 tmux attach-session -t "$target"
